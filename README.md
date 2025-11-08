@@ -65,39 +65,36 @@ Modeller: Multi-Layer Perceptron (MLP) (Düzleştirilmiş piksellerle), Convolut
 Projenin mevcut (veritabanı ve betik) kısmını çalıştırmak için:
 
 1. Projeyi Klonlayın
-Bash
 
-git clone https://github.com/[kullanici_adiniz]/[proje_adiniz].git
-cd [proje_adiniz]
+git clone https://github.com/u-bharaki/I_AI.git
+cd I_AI
+
 2. (Öneri) Sanal Ortam Oluşturun
-Bash
 
-# Python sanal ortamını oluştur ve aktive et
 python -m venv venv
-source venv/bin/activate  # (Windows için: venv\Scripts\activate)
+source venv/bin/activate   (Windows için: venv\Scripts\activate)
+
 3. Bağımlılıkları Yükleyin
 Proje betiklerinin ihtiyaç duyduğu Python kütüphanelerini yükleyin.
 
-Bash
-
 pip install -r requirements.txt
+
 4. Veri Setini İndirin
 Kaggle'dan ODIR-5K veri setini indirin. Görüntü klasörünü (preprocessed_images veya benzeri) data/ klasörü altına taşıyın. full_of.csv dosyasının data/ altında olduğundan emin olun.
 
 5. EDA Notebook'unu Çalıştırın
-Bash
 
 jupyter notebook notebooks/EDA.ipynb
+
 6. Modelleri Eğitin
 (Not: train.py betiği tamamlandığında kullanılacaktır)
-
-Bash
 
 # Tüm modelleri eğitmek için
 python scripts/train.py --model all
 
 # Sadece CNN modelini eğitmek için
 python scripts/train.py --model cnn
+
 👥 Ekip
 Berk Ülker
 
