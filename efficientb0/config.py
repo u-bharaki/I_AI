@@ -15,8 +15,8 @@ LEARNING_RATE_WARMUP = 1e-5
 
 RANDOM_STATE = 42
 
-CSV_FILE = r"C:\Users\duygu\IdeaProjects\yap470projesel\cleaned_file_final.csv"
-DATA_ROOT = r"C:\Users\duygu\IdeaProjects\yap470projesel\preprocessed_images"
+CSV_FILE = r"..\cleaned_file_final.csv"
+DATA_ROOT = r"..\preprocessed_images"
 
 LABEL_COLUMN = "labels"
 IMAGE_COLUMN = "filepath"

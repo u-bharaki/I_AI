@@ -1,0 +1,12 @@
+#IDE Config
+.idea/
+
+#Models
+*.h5
+*.keras
+
+#Classical Models
+/classicalModels/trained_classical_models/
+
+#npz files
+/classicalModels/cache/
