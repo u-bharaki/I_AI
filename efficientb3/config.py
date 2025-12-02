@@ -1,0 +1,24 @@
+# config.py
+
+IMAGE_SIZE = 512
+NUM_CLASSES = 8
+CHANNELS = 3
+
+BATCH_SIZE = 32
+
+EPOCHS_FROZEN = 6
+EPOCHS_FINETUNE = 14
+EPOCHS_WARMUP = 5
+
+LR_FROZEN = 1e-3
+LR_FINETUNE = 1e-4
+LR_WARMUP = 1e-5
+
+CSV_FILE = r"..\cleaned_file_final.csv"
+DATA_ROOT = r"..\preprocessed_images"
+
+LABEL_COLUMN = "labels"
+IMAGE_COLUMN = "filepath"
+
+RANDOM_STATE = 42
+LAYERS_TO_FINE_TUNE = 80
