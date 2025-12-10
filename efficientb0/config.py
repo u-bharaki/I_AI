@@ -1,21 +1,25 @@
-IMAGE_SIZE = 512
+import os
+
+# --- AYARLAR ---
+# EfficientNetB0 için en ideal boyut 224'tür.
+# 512 yapmak modelin kafasını karıştırır ve eğitimi yavaşlatır.
+IMAGE_SIZE = 224
 CHANNELS = 3
 NUM_CLASSES = 8
 
-BATCH_SIZE = 16
+# Batch Size: 32 (RAM hatası alırsan 16'ya düşür)
+BATCH_SIZE = 32
 RANDOM_STATE = 42
 
-# Learning rates
+# Learning Rates
 LR_FROZEN = 1e-3
-LR_FINETUNE = 1e-5
-LR_WARMUP = 1e-6
+LR_UNFREEZE = 1e-5  # Hassas ayar için çok düşük hız
 
 # Epochs
-EPOCHS_FROZEN = 10
-EPOCHS_FINETUNE = 20
-EPOCHS_WARMUP = 5
+EPOCHS_FROZEN = 10   # Isınma turları
+EPOCHS_UNFREEZE = 35 # Asıl öğrenme süreci (Artırıldı)
 
-# Dataset
+# Dosya Yolları (Kendi bilgisayarına göre ise dokunma)
 CSV_FILE = r"..\cleaned_file_final.csv"
 DATA_ROOT = r"..\preprocessed_images"
 
