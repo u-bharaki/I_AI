@@ -1,4 +1,3 @@
-# model.py
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from tensorflow.keras.models import Model
@@ -7,6 +6,7 @@ from config import *
 
 
 def build_model(trainable=False):
+
     base_model = EfficientNetB0(
         include_top=False,
         weights="imagenet",
@@ -23,5 +23,4 @@ def build_model(trainable=False):
 
     out = Dense(NUM_CLASSES, activation="softmax")(x)
 
-    model = Model(inputs=base_model.input, outputs=out)
-    return model
+    return Model(inputs=base_model.input, outputs=out), base_model
