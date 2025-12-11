@@ -42,7 +42,7 @@ def evaluate_model():
     test_ds = test_ds.map(process_image_val).batch(BATCH_SIZE)
 
     # 2. Final Model Yükleniyor
-    model_path = "best_model_final.keras"
+    model_path = "best_model_ultra.keras"
     if not os.path.exists(model_path):
         print(f"HATA: '{model_path}' bulunamadı! Önce train_final.py çalıştırılmalı.")
         return
