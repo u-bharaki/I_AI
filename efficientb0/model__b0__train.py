@@ -8,11 +8,9 @@ from tensorflow.keras.callbacks import (
 )
 from tensorflow.keras.applications.efficientnet import preprocess_input
 from datetime import datetime
-
-# Config ve Model yapısını koruyoruz
 from config import *
 
-# --- 1. VERİ HAZIRLIĞI ---
+# --- 1. VERİ HAZIRLIĞI (Aynı Ayarlar) ---
 def load_dataframe():
     df = pd.read_csv(CSV_FILE)
     df["label_id"] = df[LABEL_COLUMN].astype("category").cat.codes
@@ -31,11 +29,11 @@ def process_image(file_path, label):
     label = tf.one_hot(label, NUM_CLASSES)
     return img, label
 
-# Augmentation'ı biraz azalttık (Sakinleşme evresi)
+# Augmentation: Biraz daha gevşetiyoruz ki ince detayları ezberleyebilsin
 data_augmentation = tf.keras.Sequential([
     tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-    tf.keras.layers.RandomRotation(0.1), # 0.2 -> 0.1
-    tf.keras.layers.RandomContrast(0.1),
+    tf.keras.layers.RandomRotation(0.05), # Çok hafif döndürme
+    tf.keras.layers.RandomContrast(0.05),
 ])
 
 def augment_image(img, lbl):
@@ -56,8 +54,8 @@ def dataframe_to_dataset(df, shuffle=True, repeat=False):
     ds = ds.prefetch(tf.data.AUTOTUNE)
     return ds
 
-# --- 2. EĞİTİM AKIŞI ---
-if __name__ == "__main__":
+# --- 2. EĞİTİMİ DEVAM ETTİRME ---
+if _name_ == "_main_":
     try:
         gpus = tf.config.experimental.list_physical_devices('GPU')
         for gpu in gpus:
@@ -65,10 +63,9 @@ if __name__ == "__main__":
     except: pass
 
     print(f"Hedef Resim Boyutu: {IMAGE_SIZE}x{IMAGE_SIZE}")
-    print("Son rötuşlar için veriler hazırlanıyor...")
+    print("Veriler hazırlanıyor...")
 
     df = load_dataframe()
-    # Splitler aynı olmalı
     train_df, temp_df = train_test_split(df, test_size=0.30, stratify=df["label_id"], random_state=RANDOM_STATE)
     val_df, test_df = train_test_split(temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE)
 
@@ -78,48 +75,36 @@ if __name__ == "__main__":
     steps_per_epoch = len(train_df) // BATCH_SIZE
     validation_steps = len(val_df) // BATCH_SIZE
 
-    # --- ÖNCEKİ MODELİ YÜKLE ---
-    # Sıfırdan başlamıyoruz! 'Manual' modeli eğitip zekileştirdik, şimdi onu dengeleyeceğiz.
-    prev_model_path = "best_model_manual.keras"
+    # --- MODELİ YÜKLE ---
+    prev_model_path = "best_model_final.keras"
     if not os.path.exists(prev_model_path):
-        raise FileNotFoundError("Önceki model bulunamadı! Lütfen önce 'best_model_manual.keras' dosyasını oluştur.")
+        print(f"UYARI: {prev_model_path} bulunamadı, best_model_manual.keras aranıyor...")
+        prev_model_path = "best_model_manual.keras"
 
-    print(f">>> Eğitilmiş Model Yükleniyor: {prev_model_path}")
+    print(f">>> Kaldığımız yerden devam ediyoruz: {prev_model_path}")
     model = tf.keras.models.load_model(prev_model_path)
 
-    # --- YENİ "YUMUŞAK" AĞIRLIKLAR ---
-    # N sınıfını serbest bırakıyoruz (0.5 -> 1.0)
-    # D ve O sınıfını hala önemsiyoruz ama biraz gevşetiyoruz (4.0 -> 2.0)
+    # Ağırlıklar: N sınıfını (6) artık tamamen özgür bırakıyoruz (1.0)
     class_weights_final = {
-        0: 1.5,  # A
-        1: 1.0,  # C
-        2: 2.0,  # D (Dengeli koruma)
-        3: 1.5,  # G
-        4: 3.0,  # H (Hala yardıma muhtaç)
-        5: 1.0,  # M
-        6: 1.0,  # N (Normale döndü!)
-        7: 2.5,  # O
+        0: 1.5, 1: 1.0, 2: 2.0, 3: 1.5, 4: 3.0, 5: 1.0, 6: 1.0, 7: 2.5
     }
-    print(">>> Final Dengeleme Ağırlıkları:", class_weights_final)
 
-    # --- DERLEME VE EĞİTİM ---
-    # Learning Rate'i çok düşük tutuyoruz (1e-5). Modelin kafasını karıştırmadan ince ayar yapıyoruz.
+    # Learning Rate: Çok hassas ayar için minik bir değer
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-5),
         loss="categorical_crossentropy",
         metrics=["accuracy"]
     )
 
-    checkpoint = ModelCheckpoint("best_model_final.keras", monitor="val_accuracy", save_best_only=True, mode="max", verbose=1)
-    # Early stop biraz daha kısa, amaç sadece dengeyi bulmak
-    early_stop = EarlyStopping(monitor="val_loss", patience=6, restore_best_weights=True, verbose=1)
-    reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=2, min_lr=1e-7, verbose=1)
-    csv_logger = CSVLogger(f"training_log_final_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    checkpoint = ModelCheckpoint("best_model_final_v2.keras", monitor="val_accuracy", save_best_only=True, mode="max", verbose=1)
+    early_stop = EarlyStopping(monitor="val_loss", patience=8, restore_best_weights=True, verbose=1)
+    reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-7, verbose=1)
+    csv_logger = CSVLogger(f"training_log_continue_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
 
-    print("\n>>> Final Stage: Dengeleme ve Yüksek Skor Koşusu Başlıyor...")
+    print("\n>>> Uzatmalı Dönem Başlıyor (30 Epoch Daha)...")
     model.fit(
         train_ds,
-        epochs=15,  # Kısa ve etkili bir tur
+        epochs=30, # Süreyi uzattık
         steps_per_epoch=steps_per_epoch,
         validation_data=val_ds,
         validation_steps=validation_steps,
@@ -127,6 +112,5 @@ if __name__ == "__main__":
         class_weight=class_weights_final
     )
 
-    print("\n✅ TÜM EĞİTİM TAMAMLANDI!")
-    print("Final Model: best_model_final.keras")
-    print("Şimdi evaluate.py dosyasında model ismini 'best_model_final.keras' yapıp test edebilirsin.")
+    print("\n✅ EĞİTİM BİTTİ!")
+    print("Yeni Model: best_model_final_v2.keras")
