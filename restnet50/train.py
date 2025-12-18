@@ -1,66 +1,115 @@
 import tensorflow as tf
-import os
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau, CSVLogger
 from config import *
 from data_loader import load_dataframe, dataframe_to_dataset
 from model import build_resnet50_model
 from datetime import datetime
+from terminal_logger import start_logging, stop_logging
+
 
 def main():
+
     try:
         gpus = tf.config.list_physical_devices('GPU')
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-    except: pass
+    except:
+        pass
 
-    print("Veriler hazırlanıyor...")
-    df = load_dataframe()
+    logger = start_logging(log_dir="logs")
 
-    # Stratified Split
-    train_df, temp_df = train_test_split(df, test_size=0.30, stratify=df["label_id"], random_state=RANDOM_STATE)
-    val_df, _ = train_test_split(temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE)
+    try:
+        print("--- Veriler Hazırlanıyor ---")
+        df = load_dataframe()
 
-    train_ds = dataframe_to_dataset(train_df, shuffle=True, repeat=True, augment=True)
-    val_ds = dataframe_to_dataset(val_df, shuffle=False, repeat=False, augment=False)
+        print(f"Categorical Focal Loss Aktif Edildi")
 
-    steps_per_epoch = len(train_df) // BATCH_SIZE
-    validation_steps = len(val_df) // BATCH_SIZE
+        train_df, temp_df = train_test_split(df, test_size=0.30, stratify=df["label_id"], random_state=RANDOM_STATE)
+        val_df, _ = train_test_split(temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE)
 
-    print("ResNet50 Modeli oluşturuluyor...")
-    # İlk etapta base model eğitilebilir olsun (Fine-tuning için True)
-    # Donanım yetersizse False yapıp önce head eğitilmeli.
-    model = build_resnet50_model(trainable=True)
+        train_ds = dataframe_to_dataset(train_df, shuffle=True, repeat=True, augment=True)
+        val_ds = dataframe_to_dataset(val_df, shuffle=False, repeat=False, augment=False)
 
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-        loss="categorical_crossentropy",
-        metrics=["accuracy"]
-    )
+        steps_per_epoch = len(train_df) // BATCH_SIZE
+        validation_steps = len(val_df) // BATCH_SIZE
 
-    # Class Weights (Manuel ayarlarınız)
-    class_weights = {
-        0: 1.5, 1: 1.0, 2: 2.0, 3: 1.5, 4: 3.0, 5: 1.0, 6: 1.0, 7: 2.5
-    }
+        print("\n--- AŞAMA 1: WARMUP (ResNet Donduruldu) ---")
+        model = build_resnet50_model(trainable=False)
 
-    callbacks = [
-        ModelCheckpoint("best_resnet50_model.keras", monitor="val_accuracy", save_best_only=True, mode="max", verbose=1),
-        EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True, verbose=1),
-        ReduceLROnPlateau(monitor="val_loss", factor=0.2, patience=3, min_lr=1e-7, verbose=1),
-        CSVLogger(f"resnet_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
-    ]
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=LR_WARMUP),
+            loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
+            metrics=["accuracy",
+                tf.keras.metrics.Recall(name="recall"),
+                tf.keras.metrics.Precision(name="precision")]
+        )
+        """
+        class_weights = compute_class_weight(
+            'balanced',
+            classes=np.unique(train_df["label_id"]),
+            y=train_df["label_id"]
+        )
+        """
+        class_weights = {
+            0: 1.5,  # amd
+            1: 1.2,  # cataract
+            2: 1.0,  # diabetes
+            3: 1.3,  # glaucoma
+            4: 2.0,  # hypertension
+            5: 1.2,  # myopia
+            6: 0.6,  # normal
+            7: 1.0  # other
+        }
+        class_weight_dict = dict(enumerate(class_weights))
 
-    print("Eğitim Başlıyor...")
-    model.fit(
-        train_ds,
-        epochs=50,
-        steps_per_epoch=steps_per_epoch,
-        validation_data=val_ds,
-        validation_steps=validation_steps,
-        callbacks=callbacks,
-        class_weight=class_weights
-    )
-    print("Eğitim Tamamlandı.")
+        model.fit(
+            train_ds,
+            epochs=EPOCHS_WARMUP,
+            steps_per_epoch=steps_per_epoch,
+            validation_data=val_ds,
+            validation_steps=validation_steps,
+            class_weight=class_weight_dict
+        )
+
+        print("\n--- AŞAMA 2: FINE-TUNING (Tüm Model Eğitiliyor) ---")
+
+        for layer in model.layers[-30:]:
+            layer.trainable = True
+
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+            loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
+            metrics=["accuracy",
+                tf.keras.metrics.Recall(name="recall"),
+                tf.keras.metrics.Precision(name="precision")]
+        )
+
+        callbacks = [
+            ModelCheckpoint("best_resnet50_model.keras", monitor="val_accuracy", save_best_only=True, mode="max",
+                            verbose=1),
+            EarlyStopping(monitor="val_loss", patience=7, restore_best_weights=True, verbose=1),
+            ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5, min_lr=1e-7, verbose=1),
+            CSVLogger(f"resnet_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+        ]
+
+        model.fit(
+            train_ds,
+            epochs=EPOCHS_FINETUNE,
+            steps_per_epoch=steps_per_epoch,
+            validation_data=val_ds,
+            validation_steps=validation_steps,
+            class_weight=class_weight_dict,
+            callbacks=callbacks
+        )
+
+        print("Eğitim Tamamlandı.")
+    except Exception as e:
+        print(f"HATA: {e}")
+        raise
+
+    finally:
+        stop_logging(logger)
 
 if __name__ == "__main__":
     main()

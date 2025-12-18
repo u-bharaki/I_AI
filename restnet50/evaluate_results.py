@@ -8,6 +8,10 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from config import *
 from data_loader import load_dataframe, resolve_path
+from datetime import datetime
+from loss_utils import CategoricalFocalLoss
+from config import alpha
+from config import CLASS_NAMES
 from tensorflow.keras.applications.resnet50 import preprocess_input
 
 def evaluate_model():
@@ -18,9 +22,8 @@ def evaluate_model():
         return
 
     df = load_dataframe()
-    class_names = df[LABEL_COLUMN].astype("category").cat.categories.tolist()
+    class_names = CLASS_NAMES
 
-    # Split (Train ile aynı random_state olmalı)
     _, temp_df = train_test_split(df, test_size=0.30, stratify=df["label_id"], random_state=RANDOM_STATE)
     _, test_df = train_test_split(temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE)
 
@@ -33,7 +36,7 @@ def evaluate_model():
         img = tf.io.read_file(file_path)
         img = tf.image.decode_jpeg(img, channels=CHANNELS)
         img = tf.image.resize(img, [IMAGE_SIZE, IMAGE_SIZE])
-        img = preprocess_input(img) # ResNet Preprocessing
+        img = preprocess_input(img)
         return img
 
     test_ds = tf.data.Dataset.from_tensor_slices(test_paths)
@@ -44,25 +47,44 @@ def evaluate_model():
         print(f"{model_path} bulunamadı!")
         return
 
-    model = tf.keras.models.load_model(model_path)
+    model = tf.keras.models.load_model(model_path, custom_objects={'CategoricalFocalLoss': lambda **kw: CategoricalFocalLoss(alpha=alpha)})
 
     print("Tahminler alınıyor...")
     predictions = model.predict(test_ds, verbose=1)
     y_pred = np.argmax(predictions, axis=1)
-    y_true = test_labels
+    y_true = np.array(test_labels)
 
     print("\n" + "="*60)
     print("RESNET50 PERFORMANS RAPORU")
     print("="*60)
     print(classification_report(y_true, y_pred, target_names=class_names))
 
+    results_dir = "evaluation_results"
+    os.makedirs(results_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    model_name = os.path.splitext(os.path.basename(model_path))[0]
+    cm_filename = os.path.join(results_dir, f"confusion_matrix_{model_name}_{timestamp}.png")
+
     plt.figure(figsize=(12, 10))
     cm = confusion_matrix(y_true, y_pred)
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
-    plt.title('ResNet50 Confusion Matrix')
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=class_names, yticklabels=class_names)
+    plt.title(f'ResNet50 Confusion Matrix\n{timestamp}')
     plt.ylabel('Gerçek')
     plt.xlabel('Tahmin')
+
+    plt.savefig(cm_filename, dpi=300, bbox_inches='tight')
+    print(f"\n✅ Confusion Matrix kaydedildi: {cm_filename}")
+
     plt.show()
+
+    report_filename = os.path.join(results_dir, f"classification_report_{model_name}_{timestamp}.txt")
+    with open(report_filename, 'w', encoding='utf-8') as f:
+        f.write("=" * 60 + "\n")
+        f.write(f"RESNET50 PERFORMANS RAPORU - {timestamp}\n")
+        f.write("=" * 60 + "\n")
+        f.write(classification_report(y_true, y_pred, target_names=class_names))
+    print(f"✅ Classification Report kaydedildi: {report_filename}")
 
 if __name__ == "__main__":
     evaluate_model()

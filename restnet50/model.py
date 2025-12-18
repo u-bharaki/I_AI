@@ -5,7 +5,7 @@ from tensorflow.keras.applications import ResNet50
 from config import *
 
 
-def build_resnet50_model(trainable=True):
+def build_resnet50_model(trainable=False):
     base_model = ResNet50(
         include_top=False,
         weights="imagenet",
@@ -17,11 +17,7 @@ def build_resnet50_model(trainable=True):
     x = base_model.output
     x = GlobalAveragePooling2D()(x)
 
-    x = BatchNormalization()(x)
-    x = Dropout(0.5)(x)
-
-    x = Dense(512, activation="relu")(x)
-
+    x = Dense(512, activation='relu')(x)
     x = BatchNormalization()(x)
     x = Dropout(0.3)(x)
 
