@@ -1,11 +1,8 @@
 import tensorflow as tf
-
 from config import alpha
 
 @tf.keras.utils.register_keras_serializable()
 class CategoricalFocalLoss(tf.keras.losses.Loss):
-
-
 
     def __init__(self, gamma=2.0, alpha=alpha, **kwargs):
         super().__init__(**kwargs)

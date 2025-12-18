@@ -1,53 +1,46 @@
+import os
 import pandas as pd
 import tensorflow as tf
-from config import *
 from tensorflow.keras.applications.resnet50 import preprocess_input
-
+from config import *
 
 def load_dataframe():
-    if not os.path.exists(CSV_FILE):
-        raise FileNotFoundError(f"{CSV_FILE} bulunamadı.")
     df = pd.read_csv(CSV_FILE)
-
-    df["label_id"] = df[LABEL_COLUMN].apply(
-        lambda x: CLASS_NAMES.index(x)
-    )
+    df["label_id"] = df[LABEL_COLUMN].apply(lambda x: CLASS_NAMES.index(x))
     return df
 
-
 def resolve_path(x):
-    if os.path.isabs(x): return x
-    return os.path.join(DATA_ROOT, x)
+    return x if os.path.isabs(x) else os.path.join(DATA_ROOT, x)
 
-
-def process_image(file_path, label):
-    img = tf.io.read_file(file_path)
-    img = tf.image.decode_jpeg(img, channels=CHANNELS)
-    img = tf.image.resize(img, [IMAGE_SIZE, IMAGE_SIZE])
-
-    img = preprocess_input(img)
-
-    label = tf.one_hot(label, NUM_CLASSES)
-    return img, label
-
-
+# --- AUGMENTATION (SADE & TIBBİ UYGUN) ---
 data_augmentation = tf.keras.Sequential([
-    tf.keras.layers.RandomRotation(0.04),
-    tf.keras.layers.RandomZoom(0.08),
+    tf.keras.layers.RandomFlip("horizontal"),
+    tf.keras.layers.RandomRotation(0.05),
     tf.keras.layers.RandomContrast(0.1),
 ])
 
+def process_image(path, label):
+    img = tf.io.read_file(path)
+    img = tf.image.decode_jpeg(img, channels=CHANNELS)
+    img = tf.image.resize(img, [IMAGE_SIZE, IMAGE_SIZE])
+    return img, label
 
 def augment_image(img, lbl):
     img = data_augmentation(img, training=True)
+    img = preprocess_input(img)
+    lbl = tf.one_hot(lbl, NUM_CLASSES)
     return img, lbl
 
+def normalize_only(img, lbl):
+    img = preprocess_input(img)
+    lbl = tf.one_hot(lbl, NUM_CLASSES)
+    return img, lbl
 
-def dataframe_to_dataset(df, shuffle=True, repeat=False, augment=False):
-    file_paths = [resolve_path(x) for x in df[IMAGE_COLUMN]]
+def dataframe_to_dataset(df, augment=False, shuffle=True, repeat=False):
+    paths = [resolve_path(x) for x in df[IMAGE_COLUMN]]
     labels = df["label_id"].tolist()
 
-    ds = tf.data.Dataset.from_tensor_slices((file_paths, labels))
+    ds = tf.data.Dataset.from_tensor_slices((paths, labels))
     ds = ds.map(process_image, num_parallel_calls=tf.data.AUTOTUNE)
 
     if shuffle:
@@ -55,10 +48,11 @@ def dataframe_to_dataset(df, shuffle=True, repeat=False, augment=False):
 
     if augment:
         ds = ds.map(augment_image, num_parallel_calls=tf.data.AUTOTUNE)
+    else:
+        ds = ds.map(normalize_only, num_parallel_calls=tf.data.AUTOTUNE)
 
     ds = ds.batch(BATCH_SIZE)
     if repeat:
         ds = ds.repeat()
 
-    ds = ds.prefetch(tf.data.AUTOTUNE)
-    return ds
+    return ds.prefetch(tf.data.AUTOTUNE)
