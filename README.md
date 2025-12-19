@@ -239,7 +239,7 @@ python evaluate_results.py
 
 * **Ali Emre YENİHAYAT** — EfficientNet B3 & Data Analysis
 * **Berk ÜLKER** — ResNet50, CLAHE Implementation, Pipeline Design
-* **Duygu AKMAN** — EfficientNet B0 Optimization & Classical ML Benchmarks
+* **Duygu AKMAN** — EfficientNet B0  & Classical ML Benchmarks
 
 ---
 
