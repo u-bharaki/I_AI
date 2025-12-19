@@ -1,3 +1,4 @@
+
 # I_AI: Multi-Class Ocular Disease Classification
 
 ![Project Status](https://img.shields.io/badge/Status-Completed-success)
@@ -5,31 +6,35 @@
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.10%2B-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+---
+
 ## 👁️ Project Overview
 **I_AI** is a comprehensive research and development project focused on classifying **8 distinct ocular diseases** using retinal fundus images. The project systematically evaluates the performance gap between **Classical Machine Learning algorithms** and state-of-the-art **Deep Convolutional Neural Networks (CNNs)**.
 
-The primary goal is to tackle common challenges in medical imaging:
-- **Class Imbalance**
+The primary goal is to address core challenges in medical imaging:
+- **Class Imbalance** (dominance of *Normal* samples)
 - **High Dimensionality**
 - **Subtle Pathological Features** (e.g., micro-aneurysms in Diabetic Retinopathy)
 
 ---
 
 ## 🎯 Objectives
-- Compare **Classical Machine Learning** models (KNN, Random Forest, Logistic Regression) across different image resolutions (**32^2**, **64^2**, **128^2**).
-- Optimize **EfficientNet (B0 & B3)** architectures to reduce overfitting using **L2 Regularization** and **Label Smoothing**.
+- Compare **Classical Machine Learning** models (KNN, Random Forest, Logistic Regression) across multiple resolutions (**32×32**, **64×64**, **128×128**).
+- Optimize **EfficientNet (B0 & B3)** using **Progressive Resizing** (up to **300×300**) and regularization techniques.
 - Improve **ResNet50** sensitivity to minority classes using **CLAHE** preprocessing and **Categorical Focal Loss**.
+- Evaluate **MobileNetV3-Large** for rapid prototyping and efficiency benchmarking.
 
 ---
 
 ## 📂 Dataset & Preprocessing
-The dataset consists of retinal fundus images belonging to the following 8 classes:
+The dataset consists of retinal fundus images categorized into 8 classes:
 
 `AMD`, `Cataract`, `Diabetes`, `Glaucoma`, `Hypertension`, `Myopia`, `Normal`, `Other`
 
 ### Key Preprocessing Steps
-1. **Resolution Standardization**  
-   Images are resized to **224 × 224** for CNN-based models to balance computational cost and feature richness.
+1. **Progressive Resolution Standardization**  
+   Initial CNN training is performed at **224 × 224** for computational efficiency.  
+   During final fine-tuning of EfficientNet models, resolution is increased to **300 × 300** to capture finer details without the heavy cost of 512 × 512.
 
 2. **CLAHE (Contrast Limited Adaptive Histogram Equalization)**  
    Applied to the **L-channel in LAB color space** to enhance vessels and hemorrhages.  
@@ -43,55 +48,74 @@ The dataset consists of retinal fundus images belonging to the following 8 class
 ## 🏗️ Methodologies & Architectures
 
 ### 1. Classical Machine Learning
-Classical models were trained on **flattened image vectors**, highlighting the curse of dimensionality.
+Models were trained on **flattened image vectors**, highlighting the *Curse of Dimensionality*.
 
 - **Models:** KNN, Decision Tree, Logistic Regression, Random Forest
-- **Key Findings:**
-  - Logistic Regression fails at **128x128** due to feature explosion (~49k features).
-  - **Random Forest** is the most robust classical model, achieving the best trade-off between noise tolerance and accuracy.
+- **Key Finding:**  
+  **Random Forest** at **64×64** provided the best balance between robustness and accuracy, while Logistic Regression failed at **128×128** due to feature explosion.
 
 ---
 
 ### 2. EfficientNet Family (B0 & B3)
 
-- **Initial Observation:**  
-  EfficientNet-B0 achieved **79% Test Accuracy** but only **64% Validation Accuracy**, indicating severe overfitting.
+- **Challenge:**  
+  EfficientNet-B0 initially suffered from severe overfitting (**79% Test vs. 64% Validation**).
 
-- **Ultimate Pipeline (Regularized Setup):**
-  - **L2 Regularization:** Prevents weight explosion and improves generalization.
-  - **Label Smoothing:** Replaces hard targets (1.0) with soft labels (e.g., 0.9) to reduce overconfidence.
-
-- **Outcome:**
-  - Validation and training accuracy gap reduced to **<2%**
-  - Final balanced accuracy of approximately **60%**
-  - EfficientNet-B3 offers higher capacity but incurs **~40% higher RAM and CPU usage**
-
----
-
-### 3. ResNet50 (The Specialist Model)
-
-- **Main Focus:** Class imbalance (dominance of the *Normal* class)
-
-- **Techniques Used:**
-  - **Categorical Focal Loss:**  
-    Down-weights easy examples and emphasizes hard minority classes such as *Diabetes* and *Hypertension*.
-  - **Transfer Learning:**  
-    Initialized with ImageNet weights using a **Warmup → Fine-Tuning** training strategy.
+- **The “Ultimate” Pipeline:**
+  - **L2 Regularization**
+  - **Label Smoothing**  
+  These techniques penalize large weights and reduce model overconfidence.
 
 - **Result:**  
-  Lower overall accuracy but **significantly higher recall** on minority disease classes.
+  The generalization gap was reduced to **<2%**, achieving a stable accuracy of approximately **60%**.
+
+- **EfficientNet-B3:**  
+  Utilized for higher capacity learning. Due to I/O bottlenecks between CPU and GPU at **300×300** resolution, a custom **CUDA backend selection mechanism** was implemented to manage memory pressure.
 
 ---
 
-## 📊 Performance Results
+### 3. ResNet50 (The Specialist)
+- **Focus:** Class imbalance mitigation.
+- **Technique:**  
+  **Categorical Focal Loss** (γ = 2.0) was integrated to down-weight easy samples (*Normal*) and emphasize hard minority classes (*Diabetes*, *Hypertension*).
+- **Result:**  
+  Lower overall accuracy but significantly **higher recall** for minority disease classes.
+
+---
+
+### 4. MobileNetV3-Large (The Sprinter)
+- **Focus:** Speed and efficiency.
+- **Performance:**
+  - **Training Speed:** ~40 seconds per epoch
+  - **Convergence:** Stable validation within 15–20 minutes
+- **Use Case:**  
+  Ideal for rapid experimentation and hyperparameter tuning, though less effective for capturing very subtle features compared to EfficientNet-B3 or ResNet50.
+
+---
+
+## 📊 Performance Results Summary
 
 | Model Strategy | Resolution | Test Accuracy | Key Observation |
-|---------------|-----------:|--------------:|----------------|
-| KNN (k=7) | 32 × 32 | ~30% | Unable to capture spatial hierarchy |
-| Random Forest | 64 × 64 | **46%** | Best classical ML performance |
-| EfficientNet-B0 (Push) | 224 × 224 | 79% | Severe overfitting (Val: 64%) |
-| EfficientNet-B0 (Ultimate) | 224 × 224 | **60%** | Balanced, strong generalization |
-| ResNet50 (Focal Loss) | 224 × 224 | 51% | High recall on minority classes |
+|---------------|------------|---------------|----------------|
+| **KNN (k=7)** | 32 × 32 | ~30% | Failed to capture spatial hierarchy |
+| **Random Forest** | 64 × 64 | **46%** | Best classical ML performance |
+| **MobileNetV3-Large** | 224 × 224 | ~55% | Extremely fast convergence |
+| **ResNet50 (Focal Loss)** | 224 × 224 | 51% | High recall on minority classes |
+| **EfficientNet-B0 (Push)** | 224 × 224 | 79% | Severe overfitting |
+| **EfficientNet-B0 (Ultimate)** | 300 × 300 | **60%** | Best generalization |
+
+---
+
+## 💻 Hardware and Setup
+The experimental infrastructure was designed to support varying computational requirements:
+
+- **Primary Workstation:**  
+  NVIDIA GeForce **RTX 4080 (16GB VRAM)**  
+  Used for ResNet50, MobileNetV3, and EfficientNet-B0 experiments.
+
+- **Secondary Environment:**  
+  NVIDIA GeForce **GTX 1070 Ti**  
+  Used for EfficientNet-B3 with custom CUDA kernel allocation to handle memory bottlenecks.
 
 ---
 
@@ -99,7 +123,7 @@ Classical models were trained on **flattened image vectors**, highlighting the c
 
 ### Prerequisites
 - Python 3.8+
-- NVIDIA GPU (recommended for CNN training)
+- NVIDIA GPU (highly recommended)
 - Required libraries:
   - `tensorflow`
   - `scikit-learn`
@@ -123,86 +147,46 @@ pip install -r requirements.txt
 
 ---
 
-### 3. Training
+## 🚀 Training
 
-You can run different training pipelines depending on the selected **model architecture** and **training strategy**.  
-Make sure you are in the **root directory** of the project before running any command.
+Run the script corresponding to the desired architecture.
+Ensure you are in the **root directory**.
 
----
-
-#### ResNet50 (Focal Loss & CLAHE)
-
-Train the ResNet50 model with CLAHE preprocessing and Categorical Focal Loss:
+### ResNet50 (Focal Loss & CLAHE)
 
 ```bash
 python resnet50/train.py
-````
+```
 
-**Resume Training:**
-The same script automatically detects the best checkpoint and resumes training if it exists.
-
----
-
-#### EfficientNet-B0 (The “Ultimate” Pipeline)
-
-Run the optimized EfficientNet-B0 training with **L2 Regularization** and **Label Smoothing**:
+### EfficientNet-B0 (The “Ultimate” Pipeline)
 
 ```bash
 python efficientb0/train_ultimate_b0.py
 ```
 
-Other available training strategies:
-
-* `train_push.py`
-* `train_stabilize.py`
-
----
-
-#### EfficientNet-B3 (High-Capacity Model)
-
-Train the higher-capacity EfficientNet-B3 model:
+### EfficientNet-B3 (High Capacity)
 
 ```bash
 python efficientb3/train.py
 ```
 
----
-
-#### Classical Machine Learning Models
-
-Classical ML algorithms can be trained individually.
-For example, to train a **Random Forest** model:
-
-```bash
-python classicalModels/model_forest.py
-```
-
-Other available scripts:
-
-* `model_knn.py`
-* `model_logistic.py`
-* `model_tree.py`
-
----
-
-#### MobileNetV3-Large (Fast Training)
-
-Train the lightweight MobileNetV3-Large model with fast convergence and logging enabled:
+### MobileNetV3-Large (Fast Training)
 
 ```bash
 python MobileNetV3-Large/train_fast_with_logs.py
 ```
 
-### Resume Training from a Checkpoint
-
-The system automatically checks for the file:
+### Classical Models (Example: Random Forest)
 
 ```bash
-best_resnet50_model.keras
+python classicalModels/model_forest.py
 ```
 
-* If it exists, training resumes from the last best epoch.
-* If it does not exist, training starts from scratch.
+---
+
+## 🔄 Resume Training
+
+To resume training from the last automatically detected checkpoint:
 
 ```bash
 python train_continue.py
@@ -212,13 +196,7 @@ python train_continue.py
 
 ## 🧪 Evaluation
 
-To generate:
-
-* Confusion Matrices
-* Classification Reports
-* Visual evaluation metrics
-
-Run:
+To generate **Confusion Matrices** and **Classification Reports**:
 
 ```bash
 python evaluate_results.py
@@ -228,29 +206,21 @@ python evaluate_results.py
 
 ## 📈 Visualizations
 
-* Efficiency vs. Overfitting
-* Resource Utilization Analysis
-* Impact of Regularization on EfficientNet-B0 (Push vs Ultimate)
-* EfficientNet-B3 RAM and CPU Usage Analysis
+The project includes scripts for generating:
+
+* Confusion Matrix comparisons (Push vs. Stabilize strategies)
+* Accuracy and loss evolution graphs
+* RAM vs. GPU utilization plots for identifying I/O bottlenecks
 
 ---
 
 ## 🤝 Contributors
 
-* **Ali Emre YENİHAYAT** — EfficientNet B3 & Data Analysis
+* **Ali Emre YENİHAYAT** — EfficientNet-B3 Architecture & Data Analysis
 * **Berk ÜLKER** — ResNet50, CLAHE Implementation, Pipeline Design
-* **Duygu AKMAN** — EfficientNet B0  & Classical ML Benchmarks
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT License**.
-See the `LICENSE` file for details.
+* **Duygu AKMAN** — EfficientNet-B0 Optimization & Classical ML Benchmarks
 
 ---
 
 Developed at **TOBB University of Economics and Technology**
 Department of Computer Engineering
-
-
