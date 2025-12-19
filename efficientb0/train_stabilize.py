@@ -8,9 +8,8 @@ from tensorflow.keras.callbacks import (
 )
 from tensorflow.keras.applications.efficientnet import preprocess_input
 from datetime import datetime
-from config import * # config.py dosyanın olduğu yerde çalıştır
+from config import *
 
-# --- 1. VERİ HAZIRLIĞI ---
 def load_dataframe():
     df = pd.read_csv(CSV_FILE)
     df["label_id"] = df[LABEL_COLUMN].astype("category").cat.codes
@@ -29,13 +28,11 @@ def process_image(file_path, label):
     label = tf.one_hot(label, NUM_CLASSES)
     return img, label
 
-# --- KRİTİK HAMLE: SERT AUGMENTATION (EZBER BOZAN) ---
-# Modelin resimleri "ezberlemesini" engellemek için zorlaştırıyoruz.
 data_augmentation = tf.keras.Sequential([
     tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-    tf.keras.layers.RandomRotation(0.2), # %20 Dönme (Bayağı döndürür)
-    tf.keras.layers.RandomZoom(0.2),     # %20 Zoom (Detay saklar)
-    tf.keras.layers.RandomContrast(0.2), # Kontrast değişimi
+    tf.keras.layers.RandomRotation(0.2),
+    tf.keras.layers.RandomZoom(0.2),
+    tf.keras.layers.RandomContrast(0.2),
 ])
 
 def augment_image(img, lbl):
@@ -56,7 +53,6 @@ def dataframe_to_dataset(df, shuffle=True, repeat=False):
     ds = ds.prefetch(tf.data.AUTOTUNE)
     return ds
 
-# --- 2. STABİLİZASYON EĞİTİMİ ---
 if __name__ == "__main__":
     try:
         gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -68,7 +64,6 @@ if __name__ == "__main__":
     print("Veriler Sert Augmentation ile hazırlanıyor...")
 
     df = load_dataframe()
-    # Splitler birebir aynı olmalı
     train_df, temp_df = train_test_split(df, test_size=0.30, stratify=df["label_id"], random_state=RANDOM_STATE)
     val_df, test_df = train_test_split(temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE)
 
@@ -78,9 +73,6 @@ if __name__ == "__main__":
     steps_per_epoch = len(train_df) // BATCH_SIZE
     validation_steps = len(val_df) // BATCH_SIZE
 
-    # --- MODEL SEÇİMİ ---
-    # STRATEJİ: Overfit olan "Ultra" modelini değil,
-    # ondan önceki temiz "Final v2" modelini yüklüyoruz.
     prev_model_path = "best_model_final_v2.keras"
     if not os.path.exists(prev_model_path):
         print("UYARI: v2 bulunamadı, manual.keras aranıyor...")
@@ -89,16 +81,13 @@ if __name__ == "__main__":
     print(f">>> Temiz Model Yükleniyor: {prev_model_path}")
     model = tf.keras.models.load_model(prev_model_path)
 
-    # --- AYARLAR ---
-    # Label Smoothing: %0.1 (Modelin kendine aşırı güvenmesini engeller)
-    # Learning Rate: 1e-5 (İnce işçilik)
+
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-5),
         loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
         metrics=["accuracy"]
     )
 
-    # Ağırlıklar: Standart Dengeli
     class_weights_stable = {
         0: 1.2, 1: 1.0, 2: 2.0, 3: 1.2, 4: 3.0, 5: 1.0, 6: 1.0, 7: 2.5
     }
@@ -106,7 +95,6 @@ if __name__ == "__main__":
     checkpoint = ModelCheckpoint("best_model_stabilized.keras", monitor="val_accuracy", save_best_only=True, mode="max", verbose=1)
     reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-7, verbose=1)
 
-    # Early Stopping'i bu sefer 'val_loss'a bakacak şekilde ayarladık, daha güvenli.
     early_stop = EarlyStopping(monitor="val_loss", patience=8, restore_best_weights=True, verbose=1)
 
     csv_logger = CSVLogger(f"training_log_stabilize_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
@@ -114,7 +102,7 @@ if __name__ == "__main__":
     print("\n>>> Stabilizasyon Dönemi Başlıyor (Ezber Bozan Eğitim)...")
     model.fit(
         train_ds,
-        epochs=20, # 20 Epoch boyunca sıkı eğitim
+        epochs=20,
         steps_per_epoch=steps_per_epoch,
         validation_data=val_ds,
         validation_steps=validation_steps,

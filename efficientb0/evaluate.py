@@ -13,7 +13,6 @@ def evaluate_model():
     print(f"Test Resim Boyutu: {IMAGE_SIZE}x{IMAGE_SIZE}")
     print("Final Model Test Ediliyor...")
 
-    # 1. Veri Hazırlığı
     if not os.path.exists(CSV_FILE):
         print(f"HATA: CSV dosyası bulunamadı: {CSV_FILE}")
         return
@@ -22,7 +21,6 @@ def evaluate_model():
     df["label_id"] = df[LABEL_COLUMN].astype("category").cat.codes
     class_names = df[LABEL_COLUMN].astype("category").cat.categories.tolist()
 
-    # Splitler birebir aynı olmalı
     _, temp_df = train_test_split(df, test_size=0.30, stratify=df["label_id"], random_state=RANDOM_STATE)
     val_df, test_df = train_test_split(temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE)
 
@@ -41,7 +39,6 @@ def evaluate_model():
     test_ds = tf.data.Dataset.from_tensor_slices(test_paths)
     test_ds = test_ds.map(process_image_val).batch(BATCH_SIZE)
 
-    # 2. Final Model Yükleniyor
     model_path = "best_model_ultra.keras"
     if not os.path.exists(model_path):
         print(f"HATA: '{model_path}' bulunamadı! Önce train_final.py çalıştırılmalı.")
@@ -50,13 +47,11 @@ def evaluate_model():
     print(f"Model yükleniyor: {model_path} ...")
     model = tf.keras.models.load_model(model_path)
 
-    # 3. Tahmin
     print("Tahminler hesaplanıyor...")
     predictions = model.predict(test_ds, verbose=1)
     y_pred = np.argmax(predictions, axis=1)
     y_true = test_labels
 
-    # 4. Raporlama
     print("\n" + "="*60)
     print("FİNAL PERFORMANS RAPORU")
     print("="*60)

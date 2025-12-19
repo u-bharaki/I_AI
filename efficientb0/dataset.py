@@ -17,20 +17,18 @@ def resolve_path(x):
     return os.path.join(DATA_ROOT, x)
 
 
-# EfficientNetB0 preprocessing + decoding
 def process_image(file_path, label):
     img = tf.io.read_file(file_path)
     img = tf.image.decode_jpeg(img, channels=CHANNELS)
     img = tf.image.resize(img, [IMAGE_SIZE, IMAGE_SIZE])
     img = tf.cast(img, tf.float32)
 
-    img = preprocess_input(img)  # EfficientNet preprocessing
+    img = preprocess_input(img)
 
     label = tf.one_hot(label, NUM_CLASSES)
     return img, label
 
 
-# Augmentation — optimize edilmiş
 rotation_layer = tf.keras.layers.RandomRotation(factor=0.05, fill_mode="reflect")
 
 def augment_image(img, lbl):
@@ -40,7 +38,6 @@ def augment_image(img, lbl):
     return img, lbl
 
 
-# *** En doğru data pipeline ***
 def dataframe_to_dataset(df, shuffle=True, repeat=False):
     file_paths = [resolve_path(x) for x in df[IMAGE_COLUMN]]
     labels = df["label_id"].tolist()
@@ -48,7 +45,7 @@ def dataframe_to_dataset(df, shuffle=True, repeat=False):
     ds = tf.data.Dataset.from_tensor_slices((file_paths, labels))
     ds = ds.map(process_image, num_parallel_calls=tf.data.AUTOTUNE)
 
-    ds = ds.cache()   # → repeat hatasını önleyen en önemli adım
+    ds = ds.cache()
 
     if shuffle:
         ds = ds.shuffle(2048)

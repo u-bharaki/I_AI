@@ -12,7 +12,6 @@ from datetime import datetime
 # Config ve Model yapısını koruyoruz
 from config import *
 
-# --- 1. VERİ HAZIRLIĞI ---
 def load_dataframe():
     df = pd.read_csv(CSV_FILE)
     df["label_id"] = df[LABEL_COLUMN].astype("category").cat.codes
@@ -31,7 +30,6 @@ def process_image(file_path, label):
     label = tf.one_hot(label, NUM_CLASSES)
     return img, label
 
-# Augmentation'ı biraz azalttık (Sakinleşme evresi)
 data_augmentation = tf.keras.Sequential([
     tf.keras.layers.RandomFlip("horizontal_and_vertical"),
     tf.keras.layers.RandomRotation(0.1), # 0.2 -> 0.1
@@ -56,7 +54,6 @@ def dataframe_to_dataset(df, shuffle=True, repeat=False):
     ds = ds.prefetch(tf.data.AUTOTUNE)
     return ds
 
-# --- 2. EĞİTİM AKIŞI ---
 if __name__ == "__main__":
     try:
         gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -68,7 +65,6 @@ if __name__ == "__main__":
     print("Son rötuşlar için veriler hazırlanıyor...")
 
     df = load_dataframe()
-    # Splitler aynı olmalı
     train_df, temp_df = train_test_split(df, test_size=0.30, stratify=df["label_id"], random_state=RANDOM_STATE)
     val_df, test_df = train_test_split(temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE)
 
@@ -78,8 +74,6 @@ if __name__ == "__main__":
     steps_per_epoch = len(train_df) // BATCH_SIZE
     validation_steps = len(val_df) // BATCH_SIZE
 
-    # --- ÖNCEKİ MODELİ YÜKLE ---
-    # Sıfırdan başlamıyoruz! 'Manual' modeli eğitip zekileştirdik, şimdi onu dengeleyeceğiz.
     prev_model_path = "best_model_manual.keras"
     if not os.path.exists(prev_model_path):
         raise FileNotFoundError("Önceki model bulunamadı! Lütfen önce 'best_model_manual.keras' dosyasını oluştur.")
@@ -87,23 +81,18 @@ if __name__ == "__main__":
     print(f">>> Eğitilmiş Model Yükleniyor: {prev_model_path}")
     model = tf.keras.models.load_model(prev_model_path)
 
-    # --- YENİ "YUMUŞAK" AĞIRLIKLAR ---
-    # N sınıfını serbest bırakıyoruz (0.5 -> 1.0)
-    # D ve O sınıfını hala önemsiyoruz ama biraz gevşetiyoruz (4.0 -> 2.0)
     class_weights_final = {
         0: 1.5,  # A
         1: 1.0,  # C
-        2: 2.0,  # D (Dengeli koruma)
+        2: 2.0,  # D
         3: 1.5,  # G
-        4: 3.0,  # H (Hala yardıma muhtaç)
+        4: 3.0,  # H
         5: 1.0,  # M
-        6: 1.0,  # N (Normale döndü!)
+        6: 1.0,  # N
         7: 2.5,  # O
     }
     print(">>> Final Dengeleme Ağırlıkları:", class_weights_final)
 
-    # --- DERLEME VE EĞİTİM ---
-    # Learning Rate'i çok düşük tutuyoruz (1e-5). Modelin kafasını karıştırmadan ince ayar yapıyoruz.
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-5),
         loss="categorical_crossentropy",
@@ -111,7 +100,6 @@ if __name__ == "__main__":
     )
 
     checkpoint = ModelCheckpoint("best_model_final.keras", monitor="val_accuracy", save_best_only=True, mode="max", verbose=1)
-    # Early stop biraz daha kısa, amaç sadece dengeyi bulmak
     early_stop = EarlyStopping(monitor="val_loss", patience=6, restore_best_weights=True, verbose=1)
     reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=2, min_lr=1e-7, verbose=1)
     csv_logger = CSVLogger(f"training_log_final_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
@@ -119,7 +107,7 @@ if __name__ == "__main__":
     print("\n>>> Final Stage: Dengeleme ve Yüksek Skor Koşusu Başlıyor...")
     model.fit(
         train_ds,
-        epochs=15,  # Kısa ve etkili bir tur
+        epochs=15,
         steps_per_epoch=steps_per_epoch,
         validation_data=val_ds,
         validation_steps=validation_steps,

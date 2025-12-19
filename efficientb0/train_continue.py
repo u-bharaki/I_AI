@@ -10,7 +10,6 @@ from tensorflow.keras.applications.efficientnet import preprocess_input
 from datetime import datetime
 from config import *
 
-# --- 1. VERİ HAZIRLIĞI (Aynı Ayarlar) ---
 def load_dataframe():
     df = pd.read_csv(CSV_FILE)
     df["label_id"] = df[LABEL_COLUMN].astype("category").cat.codes
@@ -29,10 +28,9 @@ def process_image(file_path, label):
     label = tf.one_hot(label, NUM_CLASSES)
     return img, label
 
-# Augmentation: Biraz daha gevşetiyoruz ki ince detayları ezberleyebilsin
 data_augmentation = tf.keras.Sequential([
     tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-    tf.keras.layers.RandomRotation(0.05), # Çok hafif döndürme
+    tf.keras.layers.RandomRotation(0.05),
     tf.keras.layers.RandomContrast(0.05),
 ])
 
@@ -54,7 +52,6 @@ def dataframe_to_dataset(df, shuffle=True, repeat=False):
     ds = ds.prefetch(tf.data.AUTOTUNE)
     return ds
 
-# --- 2. EĞİTİMİ DEVAM ETTİRME ---
 if __name__ == "__main__":
     try:
         gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -75,7 +72,6 @@ if __name__ == "__main__":
     steps_per_epoch = len(train_df) // BATCH_SIZE
     validation_steps = len(val_df) // BATCH_SIZE
 
-    # --- MODELİ YÜKLE ---
     prev_model_path = "best_model_final.keras"
     if not os.path.exists(prev_model_path):
         print(f"UYARI: {prev_model_path} bulunamadı, best_model_manual.keras aranıyor...")
@@ -84,12 +80,10 @@ if __name__ == "__main__":
     print(f">>> Kaldığımız yerden devam ediyoruz: {prev_model_path}")
     model = tf.keras.models.load_model(prev_model_path)
 
-    # Ağırlıklar: N sınıfını (6) artık tamamen özgür bırakıyoruz (1.0)
     class_weights_final = {
         0: 1.5, 1: 1.0, 2: 2.0, 3: 1.5, 4: 3.0, 5: 1.0, 6: 1.0, 7: 2.5
     }
 
-    # Learning Rate: Çok hassas ayar için minik bir değer
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-5),
         loss="categorical_crossentropy",
