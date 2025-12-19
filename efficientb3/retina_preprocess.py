@@ -8,7 +8,7 @@ def retina_preprocess(image):
     image = tf.cast(image * 255.0, tf.uint8)
     image_np = image.numpy()
 
-    # Green channel extraction (retina literatürü)
+    # Green channel extraction
     green = image_np[:, :, 1]
 
     # CLAHE

@@ -75,7 +75,7 @@ class MetricsCallback(tf.keras.callbacks.Callback):
         print(f" — val_f1: {_f1:.4f} — val_prec: {_prec:.4f} — val_rec: {_rec:.4f}")
 
 # ============================================
-#       GRAD-CAM FONKSİYONLARI (YENİ)
+#       GRAD-CAM FONKSİYONLARI
 # ============================================
 
 def make_gradcam_heatmap(img_array, model, last_conv_layer_name="top_activation", pred_index=None):
@@ -138,7 +138,7 @@ best_ckpt_path = "best_model.keras"
 initial_global_epoch = 0 # Toplamda kaçıncı epochta olduğumuz
 
 if os.path.exists(last_ckpt_path):
-    print(f"🔄 Son kayıt noktası bulundu: {last_ckpt_path}. Yükleniyor...")
+    print(f"Son kayıt noktası bulundu: {last_ckpt_path}. Yükleniyor...")
     model = tf.keras.models.load_model(last_ckpt_path)
     
     # State dosyasından epoch bilgisini çek
@@ -148,7 +148,7 @@ if os.path.exists(last_ckpt_path):
             initial_global_epoch = state.get("epoch", 0)
             print(f"➡ Kaldığı epoch: {initial_global_epoch}")
     else:
-        print("⚠ State dosyası bulunamadı, epoch tahmini optimizer'dan yapılacak.")
+        print("State dosyası bulunamadı, epoch tahmini optimizer'dan yapılacak.")
         try:
             initial_global_epoch = int(model.optimizer.iterations.numpy() / steps_per_epoch)
         except:
@@ -157,11 +157,11 @@ if os.path.exists(last_ckpt_path):
     start_from_checkpoint = True
     
 elif os.path.exists(best_ckpt_path):
-    print("⚠ Last checkpoint yok ama Best model bulundu. Best modelden devam ediliyor (Epoch bilgisi kayıp olabilir).")
+    print("Last checkpoint yok ama Best model bulundu. Best modelden devam ediliyor (Epoch bilgisi kayıp olabilir).")
     model = tf.keras.models.load_model(best_ckpt_path)
     start_from_checkpoint = True
 else:
-    print("➡ Yeni model oluşturuluyor...")
+    print("Yeni model oluşturuluyor...")
     model = build_model(trainable=False)
     start_from_checkpoint = False
     initial_global_epoch = 0
@@ -238,7 +238,7 @@ def save_system_usage_graphs():
     plt.savefig("system_use_gpu.png")
     plt.close()
 
-    print("\n📊 System usage graphs saved:")
+    print("\nSystem usage graphs saved:")
     print(" - system_use_cpu.png")
     print(" - system_use_ram.png")
     print(" - system_use_gpu.png\n")
@@ -259,7 +259,7 @@ else:
 monitor_thread = threading.Thread(target=system_monitor, daemon=True)
 monitor_thread.start()
 
-print("📡 System monitor started...")
+print("System monitor started...")
 
 
 # ============================================
@@ -347,7 +347,7 @@ if initial_global_epoch < stage1_limit:
     )
 
 else:
-    print("✅ Stage 1 zaten tamamlanmış, atlanıyor.")
+    print("Stage 1 zaten tamamlanmış, atlanıyor.")
 
 # ============================================
 #          STAGE 2: Fine-Tuning
@@ -362,7 +362,7 @@ if initial_global_epoch < stage2_limit:
     total_layers = len(model.layers)
     print(f"Toplam katman sayısı: {total_layers}")
 
-    # Fine-tune yapılacak sınır (Toplam - FineTuneMiktarı)
+    # Fine-tune yapılacak sınır
     fine_tune_at = total_layers - LAYERS_TO_FINE_TUNE
 
     # Sınıra kadar olan tüm katmanları dondur
@@ -395,7 +395,7 @@ if initial_global_epoch < stage2_limit:
     )
 
 else:
-    print("✅ Stage 2 zaten tamamlanmış, atlanıyor.")
+    print("Stage 2 zaten tamamlanmış, atlanıyor.")
 
 # ============================================
 #          STAGE 3: Warmup
@@ -423,7 +423,7 @@ if initial_global_epoch < stage3_limit:
     )
 
 else:
-    print("✅ Stage 3 (Warmup) zaten tamamlanmış, atlanıyor.")
+    print("Stage 3 (Warmup) zaten tamamlanmış, atlanıyor.")
 
 print("Eğitim tamamlandı!")
 
@@ -503,7 +503,7 @@ if history:
     plt.show()
 
 else:
-    print("Grafik çizilecek yeni eğitim verisi yok (Sadece test yapıldı veya history boş).")
+    print("Grafik çizilecek yeni eğitim verisi yok.")
 
 # ============================================
 #      TAHMİN TABLOSU
@@ -548,7 +548,7 @@ try:
             
 except Exception as e:
     print(f"⚠ Grad-CAM hatası: {e}")
-    print("'last_conv_layer_name' parametresini model.summary()'e bakarak güncellemen gerekebilir.")
+    print("İpucu: 'last_conv_layer_name' parametresini model.summary()'e bakarak güncellemen gerekebilir.")
 
 monitoring_active = False
 monitor_thread.join()
