@@ -83,7 +83,7 @@ if __name__ == "__main__":
     print(">>> Loss Fonksiyonu Güncelleniyor: Label Smoothing Aktif (0.1)")
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(5e-5), # Hızı biraz artırıp (Restart) tekrar düşüreceğiz
+        optimizer=tf.keras.optimizers.Adam(5e-5),
         loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
         metrics=["accuracy"]
     )
