@@ -9,10 +9,9 @@ from config import *
 from data_loader import load_dataframe, dataframe_to_dataset
 from model import build_resnet50_model
 from loss_utils import CategoricalFocalLoss
-from terminal_logger import start_logging, stop_logging
+
 
 def main():
-    logger = start_logging()
     try:
         df = load_dataframe()
 
@@ -23,8 +22,9 @@ def main():
             temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE
         )
 
-        train_ds = dataframe_to_dataset(train_df, augment=True, repeat=True)
-        val_ds = dataframe_to_dataset(val_df, augment=False)
+        # CLAHE burada data_loader içinde varsayılan olarak True çalışacak
+        train_ds = dataframe_to_dataset(train_df, augment=True, repeat=True, use_clahe=True)
+        val_ds = dataframe_to_dataset(val_df, augment=False, use_clahe=True)
 
         steps_per_epoch = len(train_df) // BATCH_SIZE
         val_steps = len(val_df) // BATCH_SIZE
@@ -75,7 +75,8 @@ def main():
         )
 
     finally:
-        stop_logging(logger)
+        pass
+        # stop_logging(logger) # Opsiyonel
 
 if __name__ == "__main__":
     main()

@@ -5,7 +5,7 @@ import numpy as np
 import hashlib
 
 CACHE_DIR = "cache"
-VERSION = "1.0"   # preprocessing pipeline versiyon numarası
+VERSION = "1.0"
 
 
 def get_file_hash(path):
@@ -52,7 +52,6 @@ def load_cache(img_size, csv_path, script_path):
 
     data = np.load(path, allow_pickle=True)
 
-    # --- Cache Invalidation Kontrolleri ---
     if data["version"] != VERSION:
         print("[CACHE] Versiyon değişti → cache geçersiz.")
         return None, None, None

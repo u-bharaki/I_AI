@@ -98,7 +98,7 @@ if __name__ == "__main__":
     print("\n>>> Uzatmalı Dönem Başlıyor (30 Epoch Daha)...")
     model.fit(
         train_ds,
-        epochs=30, # Süreyi uzattık
+        epochs=30,
         steps_per_epoch=steps_per_epoch,
         validation_data=val_ds,
         validation_steps=validation_steps,

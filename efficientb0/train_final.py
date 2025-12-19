@@ -32,7 +32,7 @@ def process_image(file_path, label):
 
 data_augmentation = tf.keras.Sequential([
     tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-    tf.keras.layers.RandomRotation(0.1), # 0.2 -> 0.1
+    tf.keras.layers.RandomRotation(0.1),
     tf.keras.layers.RandomContrast(0.1),
 ])
 

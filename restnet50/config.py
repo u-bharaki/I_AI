@@ -23,5 +23,4 @@ CLASS_NAMES = [
     "hypertension", "myopia", "normal", "other"
 ]
 
-# Focal Loss alpha (class imbalance için)
 alpha = [2.0, 1.2, 1.0, 2.0, 2.5, 0.8, 0.5, 2.0]

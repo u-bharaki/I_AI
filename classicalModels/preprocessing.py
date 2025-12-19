@@ -8,23 +8,20 @@ from tqdm import tqdm
 
 from cache import load_cache, save_cache
 
-# ---- SENİN TAM DOSYA YOLLARIN ----
 CSV_PATH = r"..\cleaned_file_final.csv"
 DATA_ROOT = r"..\preprocessed_images"
 
-SCRIPT_PATH = __file__  # preprocessing.py dosyasının tam yolu
+SCRIPT_PATH = __file__
 
 
 def load_and_prepare_data(img_size=32):
     """Önce cache'e bakar. Yoksa preprocessing yapar."""
 
-    # 1) CACHE KONTROLÜ
     Xc, yc, meta = load_cache(img_size, CSV_PATH, SCRIPT_PATH)
     if Xc is not None:
         print("[INFO] Cache bulundu → preprocessing yapılmadı.")
         return Xc, yc, None
 
-    # 2) CACHE YOKSA → NORMAL PREPROCESSING
     df = pd.read_csv(CSV_PATH)
 
     df.dropna(subset=['filepath', 'Diagnosis', 'Patient Age', 'Patient Sex'], inplace=True)

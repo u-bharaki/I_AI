@@ -45,7 +45,6 @@ class ProgressBarModel:
 
         bar.close()
 
-        # Gerçek model eğitimi
         self.model.fit(X, y)
         self.train_time = time.time() - start
         return self

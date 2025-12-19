@@ -17,9 +17,6 @@ def resolve_path(x):
         return x
     return os.path.join(DATA_ROOT, x)
 
-# --------------------
-# Preprocessing
-# --------------------
 def decode_and_resize(path, label):
     img = tf.io.read_file(path)
     img = tf.image.decode_jpeg(img, channels=CHANNELS)
@@ -33,9 +30,6 @@ def decode_and_resize(path, label):
     label = tf.one_hot(label, NUM_CLASSES)
     return img, label
 
-# --------------------
-# Augmentation
-# --------------------
 augment_layer = tf.keras.Sequential([
     tf.keras.layers.RandomFlip("horizontal_and_vertical"),
     tf.keras.layers.RandomRotation(0.1),
