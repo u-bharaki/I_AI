@@ -52,7 +52,7 @@ Models were trained on **flattened image vectors**, highlighting the *Curse of D
 
 - **Models:** KNN, Decision Tree, Logistic Regression, Random Forest
 - **Key Finding:**  
-  **Random Forest** at **64×64** provided the best balance between robustness and accuracy, while Logistic Regression failed at **128×128** due to feature explosion.
+  **Random Forest** at **64×64** provided the best balance between robustness and accuracy, while Logistic Regression experienced performance degradation at **128×128** due to the exponential growth of the feature space.
 
 ---
 
@@ -102,7 +102,9 @@ Models were trained on **flattened image vectors**, highlighting the *Curse of D
 | **MobileNetV3-Large** | 224 × 224 | ~55% | Extremely fast convergence |
 | **ResNet50 (Focal Loss)** | 224 × 224 | 51% | High recall on minority classes |
 | **EfficientNet-B0 (Push)** | 224 × 224 | 79% | Severe overfitting |
-| **EfficientNet-B0 (Ultimate)** | 300 × 300 | **60%** | Best generalization |
+| **EfficientNet-B0 (Ultimate)** | 224 × 224 | **60%** | Best generalization |
+| **EfficientNet-B3** | 512 x 512 | 45% | Unneccesary Layering |
+| **EfficientNet-B3** | 300 x 300 | 47% | High Accuracy but Long Traing Time Then Others |
 
 ---
 
@@ -184,26 +186,6 @@ python classicalModels/model_forest.py
 
 ---
 
-## 🔄 Resume Training
-
-To resume training from the last automatically detected checkpoint:
-
-```bash
-python train_continue.py
-```
-
----
-
-## 🧪 Evaluation
-
-To generate **Confusion Matrices** and **Classification Reports**:
-
-```bash
-python evaluate_results.py
-```
-
----
-
 ## 📈 Visualizations
 
 The project includes scripts for generating:
@@ -218,7 +200,7 @@ The project includes scripts for generating:
 
 * **Ali Emre YENİHAYAT** — EfficientNet-B3 Architecture & Data Analysis
 * **Berk ÜLKER** — ResNet50, CLAHE Implementation, Pipeline Design
-* **Duygu AKMAN** — EfficientNet-B0 Optimization & Classical ML Benchmarks
+* **Duygu AKMAN** — EfficientNet-B0 Optimization & Classical ML Benchmarks & MobileNetV3-Large Architecture
 
 ---
 
