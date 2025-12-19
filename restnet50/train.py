@@ -22,7 +22,6 @@ def main():
             temp_df, test_size=0.50, stratify=temp_df["label_id"], random_state=RANDOM_STATE
         )
 
-        # CLAHE burada data_loader içinde varsayılan olarak True çalışacak
         train_ds = dataframe_to_dataset(train_df, augment=True, repeat=True, use_clahe=True)
         val_ds = dataframe_to_dataset(val_df, augment=False, use_clahe=True)
 
@@ -76,7 +75,6 @@ def main():
 
     finally:
         pass
-        # stop_logging(logger) # Opsiyonel
 
 if __name__ == "__main__":
     main()

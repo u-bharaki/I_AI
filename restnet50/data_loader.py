@@ -21,22 +21,16 @@ def apply_clahe_cv2(image):
     Girdi: RGB formatında numpy array (0-255)
     Çıktı: RGB formatında numpy array (float32)
     """
-    # TensorFlow tensor'ünü numpy array'e ve uint8'e çevir (OpenCV için)
     image = image.astype(np.uint8)
 
-    # LAB renk uzayına geç
     lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
     l, a, b = cv2.split(lab)
 
-    # CLAHE oluştur ve L kanalına uygula
-    # clipLimit=2.0 (standart), tileGridSize=(8,8)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
     cl = clahe.apply(l)
 
-    # Kanalları birleştir
     limg = cv2.merge((cl, a, b))
 
-    # Tekrar RGB'ye dön
     final_img = cv2.cvtColor(limg, cv2.COLOR_LAB2RGB)
 
     return final_img.astype(np.float32)
@@ -46,7 +40,6 @@ def tf_apply_clahe(image, label):
     Python fonksiyonunu TensorFlow graph içine gömer.
     """
     [image_clahe] = tf.numpy_function(apply_clahe_cv2, [image], [tf.float32])
-    # Shape kaybolduğu için tekrar set etmemiz gerekir
     image_clahe.set_shape((IMAGE_SIZE, IMAGE_SIZE, 3))
     return image_clahe, label
 
@@ -79,17 +72,14 @@ def dataframe_to_dataset(df, augment=False, shuffle=True, repeat=False, use_clah
     labels = df["label_id"].tolist()
 
     ds = tf.data.Dataset.from_tensor_slices((paths, labels))
-    # 1. Resmi oku ve resize et
     ds = ds.map(process_image, num_parallel_calls=tf.data.AUTOTUNE)
 
-    # 2. CLAHE uygula (ResNet Preprocessing'den ÖNCE yapılmalı)
     if use_clahe:
         ds = ds.map(tf_apply_clahe, num_parallel_calls=tf.data.AUTOTUNE)
 
     if shuffle:
         ds = ds.shuffle(2048)
 
-    # 3. Augmentation ve Normalizasyon (ResNet preprocess_input burada çağrılır)
     if augment:
         ds = ds.map(augment_image, num_parallel_calls=tf.data.AUTOTUNE)
     else:
